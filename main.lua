@@ -12,9 +12,9 @@ local NORMALIZE_ANGLE = function(a)local i=FLOOR(a);return((i+180)%360)+a-i-180;
 --* https://github.com/ValveSoftware/source-sdk-2013/blob/master/mp/src/game/shared/shareddefs.h#L14-L20
 local TICK_INTERVAL = globals.TickInterval();
 
-local TIME_TO_TICKS  = function(dt) return FLOOR(0.5 + dt / TICK_INTERVAL); end;
-local TICKS_TO_TIME  = function(t)  return TICK_INTERVAL * t;                    end;
-local ROUND_TO_TICKS = function(t)  return TICK_INTERVAL * TIME_TO_TICKS(t);     end;
+local TIME_TO_TICKS  = function(dt) return FLOOR(0.5 + dt / TICK_INTERVAL);  end;
+local TICKS_TO_TIME  = function(t)  return TICK_INTERVAL * t;                end;
+local ROUND_TO_TICKS = function(t)  return TICK_INTERVAL * TIME_TO_TICKS(t); end;
 --*
 
 local function CalculateFov(vecViewAngles, vecFrom, vecTo)
