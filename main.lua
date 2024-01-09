@@ -97,10 +97,12 @@ callbacks.Register("CreateMove", function(cmd)
         g_stLatency.m_flIncoming = pNetChannel:GetLatency(1); -- FLOW_INCOMING
     end
 
+    local iTick = globals.TickCount();
     local iLocalTeam = pLocalPlayer:GetTeamNumber();   
 
     local laPlayers = entities.FindByClass("CTFPlayer");
     laPlayers[pLocalPlayer:GetIndex()] = nil;
+
 
     for i, pEnt in pairs(laPlayers) do
         if pEnt:IsAlive() and pEnt:GetTeamNumber() ~= iLocalTeam then
@@ -115,11 +117,11 @@ callbacks.Register("CreateMove", function(cmd)
             local aHead = aHitboxes[1];
 
             table.insert(pRecords, 1, {
-                m_flTime   = pEnt:GetPropFloat("m_flSimulationTime");
+                m_iTick    = iTick;
                 m_vecChest = aChest[1] + (aChest[2] - aChest[1]) * 0.5;
                 m_vecHead  = aHead[1]  + (aHead[2]  - aHead[1])  * 0.5;
             });
-
+            
             if #pRecords > 80 then
                 table.remove(pRecords, 81);
             end
@@ -146,16 +148,18 @@ callbacks.Register("CreateMove", function(cmd)
 
     local bShouldTargetHead = ShouldTargetHead(pLocalPlayer, pLocalWeapon);
 
-    local flCurTime = globals.CurTime();
-    local flLerpTime = client.GetConVar("cl_interp");
-    local flLocalTime = ROUND_TO_TICKS(CLAMP(g_stLatency.m_flIncoming + g_stLatency.m_flOutgoing, 0, 1)) - pLocalPlayer:GetPropFloat("m_flSimulationTime") + flLerpTime; 
+    local iLatencyTicks = TIME_TO_TICKS(g_stLatency.m_flIncoming);
+
+    local iCurrentTick = iTick - iLatencyTicks;
+    local iLatestTick = iCurrentTick + MIN(iLatencyTicks, TIME_TO_TICKS(0.2));
+    local iOldestTick = iCurrentTick - TIME_TO_TICKS(0.2);
 
     local vecLocalEyePos = pLocalPlayer:GetAbsOrigin() + pLocalPlayer:GetPropVector("localdata", "m_vecViewOffset[0]");
     local vecViewAngles = cmd.viewangles;
 
     local flCheckedFov = 0;
     local flBestFov = 180;
-    local flBestTime = -1;
+    local iBestTick = -1;
 
     if bShouldTargetHead then
         for i, pRecords in pairs(g_aRecords) do
@@ -164,17 +168,17 @@ callbacks.Register("CreateMove", function(cmd)
                 goto continue;
             end
 
-            if ABS(pRecords[1].m_flTime - flCurTime) >= 10 then
+            if ABS(pRecords[1].m_iTick - iTick) >= 660 then
                 g_aRecords[i] = nil;
                 goto continue;
             end
-            
+
             for _, stRecord in pairs(pRecords) do
-                if ABS(flLocalTime + stRecord.m_flTime) < 0.2 then
+                if stRecord.m_iTick <= iLatestTick and stRecord.m_iTick >= iOldestTick then
                     flCheckedFov = CalculateFov(vecViewAngles, vecLocalEyePos, stRecord.m_vecHead);
 
                     if flCheckedFov < flBestFov then
-                        flBestFov, flBestTime = flCheckedFov, stRecord.m_flTime;
+                        flBestFov, iBestTick = flCheckedFov, stRecord.m_iTick;
                     end
                 end
             end
@@ -189,17 +193,17 @@ callbacks.Register("CreateMove", function(cmd)
                 goto continue;
             end
 
-            if ABS(pRecords[1].m_flTime - flCurTime) >= 10 then
+            if ABS(pRecords[1].m_iTick - iTick) >= 660 then
                 g_aRecords[i] = nil;
                 goto continue;
             end
-            
+
             for _, stRecord in pairs(pRecords) do
-                if ABS(flLocalTime + stRecord.m_flTime) < 0.2 then
+                if stRecord.m_iTick <= iLatestTick and stRecord.m_iTick >= iOldestTick then
                     flCheckedFov = CalculateFov(vecViewAngles, vecLocalEyePos, stRecord.m_vecChest);
 
                     if flCheckedFov < flBestFov then
-                        flBestFov, flBestTime = flCheckedFov, stRecord.m_flTime;
+                        flBestFov, iBestTick = flCheckedFov, stRecord.m_iTick;
                     end
                 end
             end
@@ -208,7 +212,7 @@ callbacks.Register("CreateMove", function(cmd)
         end
     end
 
-    if flBestTime ~= -1 then
-        cmd.tick_count = TIME_TO_TICKS(flBestTime + flLerpTime);
+    if iBestTick ~= -1 then
+        cmd.tick_count = iBestTick;
     end
 end)
