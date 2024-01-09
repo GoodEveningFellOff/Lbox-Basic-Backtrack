@@ -105,7 +105,7 @@ callbacks.Register("CreateMove", function(cmd)
 
 
     for i, pEnt in pairs(laPlayers) do
-        if pEnt:IsAlive() and pEnt:GetTeamNumber() ~= iLocalTeam then
+        if pEnt:IsAlive() and pEnt:GetTeamNumber() ~= iLocalTeam and not pEnt:IsDormant() then
             if not g_aRecords[i] then
                 g_aRecords[i] = {};
             end
